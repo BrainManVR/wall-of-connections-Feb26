@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wall of Connections: Microsoft Copilot Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --yellow-cat: #FFD700;
+            --purple-cat: #9370DB;
+            --cyan-cat: #00CED1;
+            --black-cat: #222222;
+        }
+
+        .card-container {
+            perspective: 1000px;
+            aspect-ratio: 1 / 1;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            /* Padding equivalent to width of one 'a' */
+            padding: 1.2ch; 
+            box-sizing: border-box;
+        }
+
+        .card-front {
+            background-color: #FFFFFF;
+            color: #166534; /* Green font */
+            border: 2px solid #e5e7eb;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            color: #FFFFFF;
+        }
+
+        /* Category specific backgrounds */
+        .bg-yellow-cat { background-color: var(--yellow-cat); color: #000000 !important; }
+        .bg-purple-cat { background-color: var(--purple-cat); }
+        .bg-cyan-cat   { background-color: var(--cyan-cat); color: #000000 !important; }
+        .bg-black-cat  { background-color: var(--black-cat); }
+
+        .word-text {
+            font-weight: 700;
+            /* Scale font to ensure it doesn't break lines */
+            font-size: clamp(0.75rem, 2.5vw, 1.25rem);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+
+        .category-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 0.5rem;
+            opacity: 0.85;
+            border-top: 1px solid rgba(255,255,255,0.3);
+            padding-top: 0.25rem;
+            width: 90%;
+        }
+        
+        /* Specific contrast fix for dark text on bright colors */
+        .bg-yellow-cat .category-label, .bg-cyan-cat .category-label {
+            border-top: 1px solid rgba(0,0,0,0.15);
+        }
+
+        .grid-layout {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            width: 100%;
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col items-center py-12 px-4">
+
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Wall of Connections</h1>
+        <p class="text-lg text-slate-600 italic">Can you work out which 4 words belong together?</p>
+    </div>
+
+    <div id="game-grid" class="grid-layout">
+        <!-- Cards injected by JavaScript -->
+    </div>
+
+    <div class="mt-12 text-sm text-slate-400">
+        Click a card to reveal its group. Correct groups share the same color.
+    </div>
+
+    <script>
+        const cardsData = [
+            // Microsoft Apps (Yellow)
+            { word: "Word", category: "Microsoft Apps", class: "bg-yellow-cat" },
+            { word: "Teams", category: "Microsoft Apps", class: "bg-yellow-cat" },
+            { word: "Excel", category: "Microsoft Apps", class: "bg-yellow-cat" },
+            { word: "Loop", category: "Microsoft Apps", class: "bg-yellow-cat" },
+            
+            // AI Hardware (Purple)
+            { word: "H200", category: "AI Hardware", class: "bg-purple-cat" },
+            { word: "NPU", category: "AI Hardware", class: "bg-purple-cat" },
+            { word: "TPU", category: "AI Hardware", class: "bg-purple-cat" },
+            { word: "Blackwell", category: "AI Hardware", class: "bg-purple-cat" },
+            
+            // AI Image Creation (Cyan)
+            { word: "Midjourney", category: "AI Image Creation", class: "bg-cyan-cat" },
+            { word: "Veo-3", category: "AI Image Creation", class: "bg-cyan-cat" },
+            { word: "NanoBanana", category: "AI Image Creation", class: "bg-cyan-cat" },
+            { word: "DALL-E", category: "AI Image Creation", class: "bg-cyan-cat" },
+            
+            // Asian LLMs (Black)
+            { word: "DeepSeek", category: "Asian LLMs", class: "bg-black-cat" },
+            { word: "Qwen", category: "Asian LLMs", class: "bg-black-cat" },
+            { word: "MiniMax", category: "Asian LLMs", class: "bg-black-cat" },
+            { word: "Manus", category: "Asian LLMs", class: "bg-black-cat" }
+        ];
+
+        // Shuffle utility
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function initGame() {
+            const grid = document.getElementById('game-grid');
+            const shuffled = shuffleArray([...cardsData]);
+
+            shuffled.forEach(data => {
+                const container = document.createElement('div');
+                container.className = 'card-container';
+                
+                const inner = document.createElement('div');
+                inner.className = 'card-inner';
+                
+                // Front Face
+                const front = document.createElement('div');
+                front.className = 'card-front';
+                front.innerHTML = `<span class="word-text">${data.word}</span>`;
+                
+                // Back Face
+                const back = document.createElement('div');
+                back.className = `card-back ${data.class}`;
+                back.innerHTML = `
+                    <span class="word-text">${data.word}</span>
+                    <span class="category-label">${data.category}</span>
+                `;
+                
+                inner.appendChild(front);
+                inner.appendChild(back);
+                container.appendChild(inner);
+                
+                container.addEventListener('click', () => {
+                    inner.classList.toggle('is-flipped');
+                });
+                
+                grid.appendChild(container);
+            });
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
